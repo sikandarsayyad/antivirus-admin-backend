@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post("/register-user", register);
 router.post("/signin", signIn);
-router.get("/getUserData", getUserFromToken);
+router.post("/getUserData", getUserFromToken);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
