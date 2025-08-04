@@ -7,8 +7,6 @@ import {createTables} from './src/utils.js/dbUtils.js';
 import {authRouter} from './src/routes/authRoutes.js';
 dotenv.config();
 
-
-
 const app = express();
 app.use(cors());
 app.use(express.json());

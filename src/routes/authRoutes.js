@@ -4,7 +4,7 @@ import { signIn,forgotPassword, getUserFromToken, register, resetPassword } from
 const router = express.Router();
 
 router.post("/register-user", register);
-router.get("/signin", signIn);
+router.post("/signin", signIn);
 router.get("/getUserData", getUserFromToken);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
