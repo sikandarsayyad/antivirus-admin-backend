@@ -15,6 +15,9 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use('/api/auth', authRouter);
+app.get('/test', (req, res) => {
+  res.status(200).json({ message: 'Test API working!' });
+});
 
 const PORT = process.env.PORT || 5000;
 const startServer = async () => {
