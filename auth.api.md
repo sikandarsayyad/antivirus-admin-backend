@@ -3,7 +3,7 @@
 
 ## 1. 🚪 Sign In
 
-- **Method:** `GET`
+- **Method:** `POST`
 - **Endpoint:** `/api/auth/signin`
 
 ### Request Body

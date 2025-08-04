@@ -127,7 +127,7 @@ export const sendResetLinkService = async (email) => {
       { expiresIn: "10m" }
     );
 
-    const resetLink = `https://yourfrontenddomain.com/reset-password?token=${resetToken}`;
+    const resetLink = `https://https://whizfortune-frontend-1oca.vercel.app/reset-password?token=${resetToken}`;
 
     // Setup SMTP transporter
     const transporter = nodemailer.createTransport({
