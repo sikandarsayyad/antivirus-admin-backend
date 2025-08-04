@@ -92,15 +92,22 @@ export const signInUser = async (user) => {
 export const getUserDataFromToken = async (token) => {
   try {
     const decodedToken = jwt.verify(token.trim(), JWT_SECRET);
+
+    const db = getDB(); 
+
     const [rows] = await db.execute(
       "SELECT id, name, email, role FROM users WHERE email = ?",
       [decodedToken.email]
     );
-    return rows.length
-      ? { success: true, data: rows[0] }
-      : { success: false, message: "User not found" };
+
+    if (rows.length === 0) {
+      return { success: false, message: "User not found" };
+    }
+
+    return { success: true, data: rows[0] };
 
   } catch (error) {
+    console.error("getUserDataFromToken error:", error.message);
     return { success: false, message: "Invalid Token" };
   }
 };
