@@ -9,8 +9,8 @@
 ### Request Body
 ```json
 {
-  "email": "Song@example.com",
-  "password": "song123"
+  "email": "john@example.com",
+  "password": "john123"
 }
 ```
 
@@ -21,9 +21,9 @@
   "token": "JWT_TOKEN_HERE",
   "user": {
     "id": 1,
-    "name": "Song",
-    "email": "Song@example.com",
-    "role": "Admin"
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "john123"
   }
 }
 ```
