@@ -2,12 +2,11 @@ import bcrypt from "bcryptjs";
 import { getDB } from "../config/db.js";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const RESET_TOKEN = process.env.RESET_TOKEN;
-
 
 export const registerUser = async (user) => {
   const db = getDB();
@@ -92,18 +91,15 @@ export const signInUser = async (user) => {
 
 export const getUserDataFromToken = async (token) => {
   try {
-    const trimmedToken = token.trim();
-    const decodedToken = await jwt.verify(trimmedToken, JWT_SECRET);
-
+    const decodedToken = jwt.verify(token.trim(), JWT_SECRET);
     const [rows] = await db.execute(
       "SELECT id, name, email, role FROM users WHERE email = ?",
       [decodedToken.email]
     );
+    return rows.length
+      ? { success: true, data: rows[0] }
+      : { success: false, message: "User not found" };
 
-    if (rows.length === 0) {
-      return { success: false, message: "User not found" };
-    }
-    return { success: true, data: rows[0] };
   } catch (error) {
     return { success: false, message: "Invalid Token" };
   }
@@ -113,7 +109,9 @@ export const sendResetLinkService = async (email) => {
   const db = getDB();
 
   try {
-    const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [email]);
+    const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
 
     if (rows.length === 0) {
       return { success: false, message: "User not found" };
@@ -136,8 +134,8 @@ export const sendResetLinkService = async (email) => {
       secure: true,
       auth: {
         user: "sikandar.sayyad@whizfortune.com",
-        pass: "Sikandar1998"
-      }
+        pass: "Sikandar1998",
+      },
     });
 
     // Email HTML Template
@@ -162,21 +160,20 @@ export const sendResetLinkService = async (email) => {
       from: `"Support" <sikandar.sayyad@whizfortune.com>`,
       to: email,
       subject: "Reset Your Password",
-      html: htmlBody
+      html: htmlBody,
     });
 
     return {
       success: true,
       message: "Reset password email sent successfully",
       resetLink,
-      emailResponse: info.response
+      emailResponse: info.response,
     };
-
   } catch (error) {
     console.error("Reset link error:", error);
     return {
       success: false,
-      message: "Reset link sending failed. Please try again later."
+      message: "Reset link sending failed. Please try again later.",
     };
   }
 };
@@ -202,7 +199,3 @@ export const resetPasswordService = async (token, password) => {
     };
   }
 };
-
-
-
-
