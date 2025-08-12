@@ -112,6 +112,31 @@ export const getUserDataFromToken = async (token) => {
   }
 };
 
+
+
+export const resetPasswordService = async (token, password) => {
+
+  const db = getDB();
+
+  try {
+    const decoded = jwt.verify(token, RESET_TOKEN);
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const values = [hashedPassword, decoded.id];
+
+    await db.query("UPDATE users SET password=? WHERE id=?", values);
+
+    return { success: true, message: "Password reset successfully" };
+  } catch (error) {
+    console.error("Reset link generation error:", error);
+    return {
+      success: false,
+      message: "Something went wrong. Please try again later.",
+    };
+  }
+};
+
 export const sendResetLinkService = async (email) => {
   const db = getDB();
 
@@ -185,24 +210,91 @@ export const sendResetLinkService = async (email) => {
   }
 };
 
-export const resetPasswordService = async (token, password) => {
+
+////////////////////////////////////////////////////
+
+export const sendResetLink = async (toEmail, formData) => {
   const db = getDB();
+  const { host, port, user, password, fromEmail } = formData;
+  console.log( host, port, user, password, fromEmail);
+  
+  if (!host || !port || !user || !password || !fromEmail) {
+    console.error("Missing SMTP configuration data");
+    return { success: false, message: "SMTP configuration is incomplete" };
+  }
+  if (!toEmail) {
+    console.error("Recipient email is required");
+    return { success: false, message: "Recipient email is required" };
+  }
 
   try {
-    const decoded = jwt.verify(token, RESET_TOKEN);
+    const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [
+      toEmail,
+    ]);
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    if (rows.length === 0) {
+      return { success: false, message: "User not found" };
+    }
 
-    const values = [hashedPassword, decoded.id];
+    const user = rows[0];
 
-    await db.query("UPDATE users SET password=? WHERE id=?", values);
+    const resetToken = jwt.sign(
+      { id: user.id, email: user.email },
+      RESET_TOKEN,
+      { expiresIn: "10m" }
+    );
 
-    return { success: true, message: "Password reset successfully" };
+    const resetLink = `https://whizfortune-frontend-1oca.vercel.app/reset-password?token=${resetToken}`;
+
+    // Setup SMTP transporter
+    const transporter = nodemailer.createTransport({
+      host: formData.host,
+      port:formData.port,
+      secure: true,
+      auth: {
+        user: formData.user,
+        pass: formData.password,
+      },
+    });
+
+
+    // Email HTML Template
+    const htmlBody = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Password Reset Request</h2>
+        <p>We received a request to reset your password.</p>
+        <p>
+          Click the button below to reset your password. This link will expire in 10 minutes.
+        </p>
+        <a href="${resetLink}" 
+           style="background-color: #4CAF50; color: white; padding: 10px 20px; 
+           text-decoration: none; display: inline-block; border-radius: 5px;">
+          Reset Password
+        </a>
+        <p>If you did not request this, you can safely ignore this email.</p>
+      </div>
+    `;
+
+    // Send email
+    const info = await transporter.sendMail({
+      from: `"Support" <${formData.fromEmail}>`,
+      to: formData.toEmail,
+      subject: "Reset Your Password",
+      html: htmlBody,
+    });
+
+    return {
+      success: true,
+      message: "Reset password email sent successfully",
+      resetLink,
+      emailResponse: info.response,
+    };
   } catch (error) {
-    console.error("Reset link generation error:", error);
+    console.error("Reset link error:", error);
     return {
       success: false,
-      message: "Something went wrong. Please try again later.",
+      message: "Reset link sending failed. Please try again later.",
     };
   }
 };
+
