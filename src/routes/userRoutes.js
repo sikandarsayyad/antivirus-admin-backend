@@ -1,19 +1,18 @@
 import express from "express";
-import {
-  createUser,
-  updateUser,
-  deleteUser,
-  getUsers,
-  getUserById,
+import { 
+  getUsers, 
+  createUser, 
+  updateUser, 
+  deleteUser, 
+  getUserById 
 } from "../controllers/userController.js";
 
 const router = express.Router();
 
-// CRUD Endpoints
+router.get("/", getUsers);
+router.get("/:id", getUserById);
 router.post("/", createUser);
 router.put("/:id", updateUser);
 router.delete("/:id", deleteUser);
-router.get("/", getUsers);
-router.get("/:id", getUserById);
 
-export {router as userRouter};
+export { router as userRouter };

@@ -13,7 +13,6 @@ import { newArrivalRouter } from "./src/routes/newArrivalRoutes.js";
 import { buyCustRouter } from "./src/routes/buyCustRoutes.js";
 import { salesRouter } from "./src/routes/salesRoutes.js";
 import { inventoryRouter } from "./src/routes/inventoryRoutes.js";
-import { registerRouter } from "./src/routes/registerRouter.js";
 import { couponRouter } from "./src/routes/couponRoutes.js";
 import { userRouter } from "./src/routes/userRoutes.js";
 import { keyRouter } from "./src/routes/keyRoutes.js";
@@ -80,10 +79,10 @@ app.use("/api/newArrival", newArrivalRouter);
 app.use("/api/buyingcust", buyCustRouter);
 app.use("/api/sales", salesRouter);
 app.use("/api/inventory", inventoryRouter);
-app.use("/api/register", registerRouter);
 app.use("/api/coupons", couponRouter);
-app.use("/api/users", userRouter);
 app.use("/api/keys", keyRouter);
+app.use("/api/users", userRouter);
+
 
 
 // -------------------- Start Server --------------------
