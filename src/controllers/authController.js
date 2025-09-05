@@ -1,227 +1,61 @@
-import UserModel from "../models/userModel.js";
-import { registerUser, sendResetLinkService } from "../services/authServices.js";
-import { signInUser } from "../services/authServices.js";
-import { getUserDataFromToken } from "../services/authServices.js";
-import { resetPasswordService } from "../services/authServices.js";
-import { sendResetLink } from "../services/authServices.js";
-import { getDB } from "../config/db.js";
+// controllers/authController.js
+import db from "../config/db.js";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
-import dotenv from "dotenv";
-dotenv.config();
+import axios from "axios";
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const RESET_TOKEN = process.env.RESET_TOKEN;
-
-
-export const register = async (req, res) => {
-  const { name, email, password, role } = req.body;
-
-  // Input validation
-  if (!name || !email || !password || !role) {
-    return res
-      .status(400)
-      .json({ success: false, message: "All fields are required"});
-  }
-
-  // Create user instance
-  const user = new UserModel({ name, email, password, role });
-
+export const LogIn = async (req, res) => {
   try {
-    // Await async call
-    const response = await registerUser(user);
+    const { email, password, captchaToken } = req.body;
 
-    return res.status(response.success ? 200 : 400).json(response);
-  } catch (error) {
-    console.error(" Registration error:", error.message);
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error: Registration failed" });
-  }
-};
-
-export const signIn = async (req, res) => {
-  const { email, password } = req.body;
-
-  // Input validation
-  if (!email || !password) {
-    return res
-      .status(400)
-      .json({ success: false, message: "All fields are required" });
-  }
-
-  // Create user instance
-  const user = new UserModel({ email, password });
-
-  try {
-    // Await async call
-    const response = await signInUser(user);
-    const { success, token } = response;
-
-    if (success) {
-      res.cookie("AuthToken", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 3600000,
-      });
+    // 1️⃣ Verify reCAPTCHA with Google
+    if (!captchaToken) {
+      return res.status(400).json({ message: "Captcha is required" });
     }
 
-    return res.status(response.success ? 200 : 400).json(response);
-  } catch (error) {
-    console.error(" Signin error:", error.message);
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error: Signin failed" });
-  }
-};
-
-export const getUserFromToken = async (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ error: "No token provided" });
-  }
-  try {
-    // Await async call
-    const response = await getUserDataFromToken(token);
-
-    return res.status(response.success ? 200 : 400).json(response);
-  } catch (error) {
-    console.error(" Signin error:", error.message);
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error: Signin failed" });
-  }
-};
-
-export const forgotPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email is required" });
-    }
-  
-    const response = await sendResetLinkService(email);
-    // const response = await sendResetLinkService(email);
-    // const response = await newSendResetLink(email);
-
-    return res.status(response.success ? 200 : 400).json(response);
-  } catch (error) {
-    console.error(" Signin error:", error.message);
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error: Link send failed" });
-  }
-};
-
-export const resetPassword = async (req, res) => {
-  try {
-    const { token, password } = req.body;
-
-    if (!token, !password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Password is required" });
-    }
-  
-    const response = await resetPasswordService(token, password);
-
-    return res.status(response.success ? 200 : 400).json(response);
-  } catch (error) {
-    console.error("Token or Password error:", error.message);
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error: Password reset failed" });
-  }
-};
-
-
-
-export const updateEmailSetting = async (req, res) => {
-  const { protocol, smtpHost, smtpPort, smtpUser, smtpPassword, fromEmail } = req.body;
-
-  if (!protocol || !smtpHost || !smtpPort || !smtpUser || !smtpPassword || !fromEmail) {
-    return res.status(400).json({ success: false, message: "All fields are required" });
-  }
-
-  try {
-    const db = getDB();
-    const values = [protocol, smtpHost, smtpPort, smtpUser, smtpPassword, fromEmail];
-
-    const [result] = await db.execute(
-      "INSERT INTO email_settings (protocol, smtpHost, smtpPort, smtpUser, smtpPassword, fromEmail) VALUES (?, ?, ?, ?, ?, ?)",
-      values
+    const captchaVerifyURL = `https://www.google.com/recaptcha/api/siteverify`;
+    const captchaResponse = await axios.post(
+      captchaVerifyURL,
+      null,
+      {
+        params: {
+          secret: process.env.RECAPTCHA_SECRET_KEY, // from Google
+          response: captchaToken,
+        },
+      }
     );
 
-    if (result.affectedRows === 0) {
-      return res.status(500).json({ success: false, message: "Failed to update email settings" });
+    if (!captchaResponse.data.success) {
+      return res.status(400).json({ message: "Captcha verification failed" });
     }
 
-    return res.status(200).json({ success: true, message: "Email settings updated successfully" });
-  } catch (error) {
-    console.error("Error updating email settings:", error.message);
-    return res.status(500).json({ success: false, message: "Failed to update email settings" });
-  }
-};
-
-export const sendTestLink = async (req, res) => {
-  const db = getDB();
-  const { formData, toEmail } = req.body;
-
-  // Basic validation
-  if (!formData?.smtpHost || !formData?.smtpPort || !formData?.smtpUser || !formData?.smtpPassword || !formData?.fromEmail) {
-    return res.status(400).json({ success: false, message: "All SMTP settings and fromEmail are required" });
-  }
-  if (!toEmail || !toEmail.includes("@")) {
-    return res.status(400).json({ success: false, message: "Valid recipient email is required" });
-  }
-
-  try {
-    // Check if user exists
-    const [rows] = await db.execute("SELECT * FROM users WHERE email = ?", [toEmail]);
-    if (!rows.length) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    // Generate reset token & link
-    const resetToken = jwt.sign(
-      { id: rows[0].id, email: rows[0].email },
-      RESET_TOKEN,
-      { expiresIn: "10m" }
+    // 2️⃣ Find user by email
+    const [rows] = await db.query(
+      "SELECT * FROM admin_cms WHERE email = ?",
+      [email]
     );
-    const resetLink = `https://whizfortune-frontend-1oca.vercel.app/reset-password?token=${resetToken}`;
+    if (rows.length === 0) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
 
-    // Setup transporter & send
-    const transporter = nodemailer.createTransport({
-      host: formData.smtpHost,
-      port: formData.smtpPort,
-      secure: true,
-      auth: { user: formData.smtpUser, pass: formData.smtpPassword },
-    });
+    const user = rows[0];
 
-    await transporter.sendMail({
-      from: `"Support" <${formData.fromEmail}>`,
-      to: toEmail,
-      subject: "Reset Your Password",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2>Password Reset Request</h2>
-          <p>Click the button below to reset your password. This link will expire in 10 minutes.</p>
-          <a href="${resetLink}" style="background:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">Reset Password</a>
-        </div>
-      `,
-    });
+    // 3️⃣ Compare plain password (⚠️ not secure — use bcrypt later)
+    if (user.pwd !== password) {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
 
-    res.status(200).json({ success: true, message: "Reset password email sent", resetLink });
+    // 4️⃣ Generate JWT
+    const token = jwt.sign(
+      { uid: user.uid, email: user.email, status: user.status },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
+    // 5️⃣ Send response without password
+    const { pwd, ...userData } = user;
+    res.json({ user: userData, token });
   } catch (error) {
-    console.error("Reset link error:", error);
-    res.status(500).json({ success: false, message: "Email sending failed" });
+    console.error("Login Error:", error);
+    res.status(500).json({ error: error.message });
   }
 };
-
-
